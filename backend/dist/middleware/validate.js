@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.isDate = exports.isPhone = exports.isEmail = exports.required = exports.validate = void 0;
+exports.isEnum = exports.isPositive = exports.isNumber = exports.isDate = exports.isPhone = exports.isEmail = exports.required = exports.validate = void 0;
 const validate = (schema) => {
     return (req, res, next) => {
         const errors = [];
@@ -46,4 +46,27 @@ const isDate = (val) => {
     return null;
 };
 exports.isDate = isDate;
+const isNumber = (val) => {
+    if (val !== undefined && val !== null && val !== '' && isNaN(Number(val))) {
+        return 'Must be a number';
+    }
+    return null;
+};
+exports.isNumber = isNumber;
+const isPositive = (val) => {
+    if (val !== undefined && val !== null && val !== '' && Number(val) <= 0) {
+        return 'Must be a positive number';
+    }
+    return null;
+};
+exports.isPositive = isPositive;
+const isEnum = (validValues) => {
+    return (val) => {
+        if (val && !validValues.includes(val)) {
+            return `Must be one of: ${validValues.join(', ')}`;
+        }
+        return null;
+    };
+};
+exports.isEnum = isEnum;
 //# sourceMappingURL=validate.js.map

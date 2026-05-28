@@ -1,5 +1,6 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import Layout from './components/Layout';
+import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import StaffList from './pages/StaffList';
 import StaffDetail from './pages/StaffDetail';
@@ -7,11 +8,24 @@ import AttendanceList from './pages/AttendanceList';
 import LeaveList from './pages/LeaveList';
 import Departments from './pages/Departments';
 import Designations from './pages/Designations';
+import { isAuthenticated } from './services/api';
+
+function ProtectedRoute({ children }: { children: React.ReactNode }) {
+  if (!isAuthenticated()) {
+    return <Navigate to="/login" replace />;
+  }
+  return <>{children}</>;
+}
 
 export default function App() {
   return (
     <Routes>
-      <Route path="/" element={<Layout />}>
+      <Route path="/login" element={
+        isAuthenticated() ? <Navigate to="/" replace /> : <Login />
+      } />
+      <Route path="/" element={
+        <ProtectedRoute><Layout /></ProtectedRoute>
+      }>
         <Route index element={<Dashboard />} />
         <Route path="staff" element={<StaffList />} />
         <Route path="staff/:id" element={<StaffDetail />} />

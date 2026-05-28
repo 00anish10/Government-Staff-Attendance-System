@@ -9,7 +9,7 @@ const getAllDepartments = async (_req, res, next) => {
        LEFT JOIN staff s ON s.department_id = d.id AND s.is_active = true
        GROUP BY d.id
        ORDER BY d.name ASC`);
-        res.json(result.rows);
+        res.json({ data: result.rows });
     }
     catch (err) {
         next(err);
@@ -27,7 +27,7 @@ const getDepartmentById = async (req, res, next) => {
         if (result.rows.length === 0) {
             return res.status(404).json({ error: 'Department not found' });
         }
-        res.json(result.rows[0]);
+        res.json({ data: result.rows[0] });
     }
     catch (err) {
         next(err);
@@ -39,7 +39,7 @@ const createDepartment = async (req, res, next) => {
         const { name, name_np, code, description } = req.body;
         const result = await (0, database_1.query)(`INSERT INTO departments (name, name_np, code, description)
        VALUES ($1, $2, $3, $4) RETURNING *`, [name, name_np, code, description]);
-        res.status(201).json(result.rows[0]);
+        res.status(201).json({ data: result.rows[0] });
     }
     catch (err) {
         next(err);
@@ -56,7 +56,7 @@ const updateDepartment = async (req, res, next) => {
         if (result.rows.length === 0) {
             return res.status(404).json({ error: 'Department not found' });
         }
-        res.json(result.rows[0]);
+        res.json({ data: result.rows[0] });
     }
     catch (err) {
         next(err);
@@ -66,6 +66,10 @@ exports.updateDepartment = updateDepartment;
 const deleteDepartment = async (req, res, next) => {
     try {
         const { id } = req.params;
+        const staffCount = await (0, database_1.query)(`SELECT COUNT(*) as count FROM staff WHERE department_id = $1 AND is_active = true`, [id]);
+        if (parseInt(staffCount.rows[0].count) > 0) {
+            return res.status(400).json({ error: `Cannot deactivate department: ${staffCount.rows[0].count} active staff assigned. Reassign them first.` });
+        }
         const result = await (0, database_1.query)(`UPDATE departments SET is_active = false, updated_at = CURRENT_TIMESTAMP WHERE id = $1 RETURNING *`, [id]);
         if (result.rows.length === 0) {
             return res.status(404).json({ error: 'Department not found' });

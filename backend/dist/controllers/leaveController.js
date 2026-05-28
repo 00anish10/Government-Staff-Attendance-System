@@ -49,9 +49,12 @@ exports.getLeaveRequests = getLeaveRequests;
 const createLeaveRequest = async (req, res, next) => {
     try {
         const { staff_id, leave_type, start_date, end_date, reason } = req.body;
+        if (new Date(start_date) > new Date(end_date)) {
+            return res.status(400).json({ error: 'Start date cannot be after end date' });
+        }
         const result = await (0, database_1.query)(`INSERT INTO leave_requests (staff_id, leave_type, start_date, end_date, reason)
        VALUES ($1, $2, $3, $4, $5) RETURNING *`, [staff_id, leave_type, start_date, end_date, reason]);
-        res.status(201).json(result.rows[0]);
+        res.status(201).json({ data: result.rows[0] });
     }
     catch (err) {
         next(err);
@@ -66,6 +69,9 @@ const approveLeave = async (req, res, next) => {
         if (leave.rows.length === 0) {
             return res.status(404).json({ error: 'Leave request not found' });
         }
+        if (leave.rows[0].status !== 'pending') {
+            return res.status(400).json({ error: `Leave request is already ${leave.rows[0].status}` });
+        }
         const result = await (0, database_1.query)(`UPDATE leave_requests SET status = 'approved', approved_by = $1,
        remarks = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3 RETURNING *`, [approved_by, remarks, id]);
         const leaveData = result.rows[0];
@@ -77,7 +83,7 @@ const approveLeave = async (req, res, next) => {
          VALUES ($1, $2, 'leave')
          ON CONFLICT (staff_id, date) DO UPDATE SET status = 'leave'`, [leaveData.staff_id, dateStr]);
         }
-        res.json(result.rows[0]);
+        res.json({ data: result.rows[0] });
     }
     catch (err) {
         next(err);
@@ -92,9 +98,12 @@ const rejectLeave = async (req, res, next) => {
         if (leave.rows.length === 0) {
             return res.status(404).json({ error: 'Leave request not found' });
         }
+        if (leave.rows[0].status !== 'pending') {
+            return res.status(400).json({ error: `Leave request is already ${leave.rows[0].status}` });
+        }
         const result = await (0, database_1.query)(`UPDATE leave_requests SET status = 'rejected', approved_by = $1,
        remarks = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3 RETURNING *`, [approved_by, remarks, id]);
-        res.json(result.rows[0]);
+        res.json({ data: result.rows[0] });
     }
     catch (err) {
         next(err);

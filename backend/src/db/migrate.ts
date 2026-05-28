@@ -49,17 +49,16 @@ const createTables = async () => {
       profile_image TEXT,
       is_active BOOLEAN DEFAULT true,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-      CONSTRAINT chk_min_age CHECK (EXTRACT(YEAR FROM age(date_of_joining, date_of_birth)) >= 18)
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
   `);
 
   await query(`
-    ALTER TABLE staff ADD COLUMN IF NOT EXISTS age INTEGER NOT NULL DEFAULT 0;
-  `);
-
-  await query(`
-    ALTER TABLE staff ADD COLUMN IF NOT EXISTS is_minor BOOLEAN DEFAULT false;
+    DO $$ BEGIN
+      IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'chk_min_age') THEN
+        ALTER TABLE staff ADD CONSTRAINT chk_min_age CHECK (EXTRACT(YEAR FROM age(date_of_joining, date_of_birth)) >= 18) NOT VALID;
+      END IF;
+    END $$;
   `);
 
   await query(`
@@ -106,24 +105,12 @@ const createTables = async () => {
     );
   `);
 
-  await query(`
-    CREATE INDEX IF NOT EXISTS idx_attendance_staff_date ON attendance(staff_id, date);
-  `);
-  await query(`
-    CREATE INDEX IF NOT EXISTS idx_attendance_date ON attendance(date);
-  `);
-  await query(`
-    CREATE INDEX IF NOT EXISTS idx_leave_staff ON leave_requests(staff_id);
-  `);
-  await query(`
-    CREATE INDEX IF NOT EXISTS idx_leave_status ON leave_requests(status);
-  `);
-  await query(`
-    CREATE INDEX IF NOT EXISTS idx_staff_department ON staff(department_id);
-  `);
-  await query(`
-    CREATE INDEX IF NOT EXISTS idx_staff_designation ON staff(designation_id);
-  `);
+  await query(`CREATE INDEX IF NOT EXISTS idx_attendance_staff_date ON attendance(staff_id, date)`);
+  await query(`CREATE INDEX IF NOT EXISTS idx_attendance_date ON attendance(date)`);
+  await query(`CREATE INDEX IF NOT EXISTS idx_leave_staff ON leave_requests(staff_id)`);
+  await query(`CREATE INDEX IF NOT EXISTS idx_leave_status ON leave_requests(status)`);
+  await query(`CREATE INDEX IF NOT EXISTS idx_staff_department ON staff(department_id)`);
+  await query(`CREATE INDEX IF NOT EXISTS idx_staff_designation ON staff(designation_id)`);
 
   console.log('Migrations completed successfully!');
   process.exit(0);

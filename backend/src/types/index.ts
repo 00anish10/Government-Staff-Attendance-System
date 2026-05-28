@@ -32,6 +32,8 @@ export interface Staff {
   address: string;
   date_of_birth: string;
   date_of_joining: string;
+  age: number;
+  is_minor: boolean;
   gender: 'male' | 'female' | 'other';
   designation_id: number;
   designation_title?: string;

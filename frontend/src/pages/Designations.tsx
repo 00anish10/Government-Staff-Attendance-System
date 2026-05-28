@@ -8,6 +8,7 @@ export default function Designations() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<Designation | null>(null);
+  const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState({ title: '', title_np: '', grade: '', pay_scale: '', department_id: '' });
 
   const fetchData = () => {
@@ -24,6 +25,15 @@ export default function Designations() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!form.title.trim() || !form.title_np.trim() || !form.grade.trim() || !form.pay_scale || !form.department_id) {
+      alert('Please fill all required fields');
+      return;
+    }
+    if (Number(form.pay_scale) <= 0) {
+      alert('Pay scale must be a positive number');
+      return;
+    }
+    setSubmitting(true);
     try {
       const payload = { ...form, pay_scale: Number(form.pay_scale), department_id: Number(form.department_id) };
       if (editing) {
@@ -37,6 +47,8 @@ export default function Designations() {
       fetchData();
     } catch (err: any) {
       alert(err.message);
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -56,13 +68,13 @@ export default function Designations() {
     }
   };
 
-  if (loading) return <div className="flex justify-center py-12"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-nepali-blue"></div></div>;
+  if (loading) return <div className="flex justify-center py-12"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-nepali-blue" /></div>;
 
   return (
     <div className="space-y-4">
       <div className="flex justify-end">
         <button className="btn-primary" onClick={() => { setShowForm(!showForm); setEditing(null); setForm({ title: '', title_np: '', grade: '', pay_scale: '', department_id: '' }); }}>
-          {showForm ? '✕ Cancel' : '+ Add Designation'}
+          {showForm ? 'Cancel' : '+ Add Designation'}
         </button>
       </div>
 
@@ -82,10 +94,12 @@ export default function Designations() {
           </div>
           <div>
             <label className="label">Pay Scale (NPR)</label>
-            <input className="input" type="number" required value={form.pay_scale} onChange={e => setForm(f => ({ ...f, pay_scale: e.target.value }))} />
+            <input className="input" type="number" min="1" required value={form.pay_scale} onChange={e => setForm(f => ({ ...f, pay_scale: e.target.value }))} />
           </div>
           <div className="flex items-end">
-            <button type="submit" className="btn-success w-full">{editing ? 'Update' : 'Save'}</button>
+            <button type="submit" className="btn-success w-full" disabled={submitting}>
+              {submitting ? 'Saving...' : editing ? 'Update' : 'Save'}
+            </button>
           </div>
           <div className="md:col-span-5">
             <label className="label">Department</label>

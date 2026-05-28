@@ -7,9 +7,11 @@ export default function Departments() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<Department | null>(null);
+  const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState({ name: '', name_np: '', code: '', description: '' });
 
   const fetchDepts = () => {
+    setLoading(true);
     api.departments.list().then(setDepartments).catch(console.error).finally(() => setLoading(false));
   };
 
@@ -17,6 +19,11 @@ export default function Departments() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!form.name.trim() || !form.name_np.trim() || !form.code.trim()) {
+      alert('Name (English), Name (Nepali), and Code are required');
+      return;
+    }
+    setSubmitting(true);
     try {
       if (editing) {
         await api.departments.update(editing.id, { ...form, is_active: editing.is_active });
@@ -29,6 +36,8 @@ export default function Departments() {
       fetchDepts();
     } catch (err: any) {
       alert(err.message);
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -48,13 +57,13 @@ export default function Departments() {
     }
   };
 
-  if (loading) return <div className="flex justify-center py-12"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-nepali-blue"></div></div>;
+  if (loading) return <div className="flex justify-center py-12"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-nepali-blue" /></div>;
 
   return (
     <div className="space-y-4">
       <div className="flex justify-end">
         <button className="btn-primary" onClick={() => { setShowForm(!showForm); setEditing(null); setForm({ name: '', name_np: '', code: '', description: '' }); }}>
-          {showForm ? '✕ Cancel' : '+ Add Department'}
+          {showForm ? 'Cancel' : '+ Add Department'}
         </button>
       </div>
 
@@ -70,10 +79,12 @@ export default function Departments() {
           </div>
           <div>
             <label className="label">Code</label>
-            <input className="input" required value={form.code} onChange={e => setForm(f => ({ ...f, code: e.target.value }))} />
+            <input className="input" required value={form.code} onChange={e => setForm(f => ({ ...f, code: e.target.value.toUpperCase() }))} />
           </div>
           <div className="flex items-end">
-            <button type="submit" className="btn-success w-full">{editing ? 'Update' : 'Save'}</button>
+            <button type="submit" className="btn-success w-full" disabled={submitting}>
+              {submitting ? 'Saving...' : editing ? 'Update' : 'Save'}
+            </button>
           </div>
           <div className="md:col-span-2">
             <label className="label">Description</label>

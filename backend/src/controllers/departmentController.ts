@@ -10,7 +10,7 @@ export const getAllDepartments = async (_req: Request, res: Response, next: Next
        GROUP BY d.id
        ORDER BY d.name ASC`
     );
-    res.json(result.rows);
+    res.json({ data: result.rows });
   } catch (err) {
     next(err);
   }
@@ -32,7 +32,7 @@ export const getDepartmentById = async (req: Request, res: Response, next: NextF
       return res.status(404).json({ error: 'Department not found' });
     }
 
-    res.json(result.rows[0]);
+    res.json({ data: result.rows[0] });
   } catch (err) {
     next(err);
   }
@@ -46,7 +46,7 @@ export const createDepartment = async (req: Request, res: Response, next: NextFu
        VALUES ($1, $2, $3, $4) RETURNING *`,
       [name, name_np, code, description]
     );
-    res.status(201).json(result.rows[0]);
+    res.status(201).json({ data: result.rows[0] });
   } catch (err) {
     next(err);
   }
@@ -68,15 +68,24 @@ export const updateDepartment = async (req: Request, res: Response, next: NextFu
       return res.status(404).json({ error: 'Department not found' });
     }
 
-    res.json(result.rows[0]);
+    res.json({ data: result.rows[0] });
   } catch (err) {
-    next(err);
+    next(err)
   }
 };
 
 export const deleteDepartment = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
+
+    const staffCount = await query(
+      `SELECT COUNT(*) as count FROM staff WHERE department_id = $1 AND is_active = true`,
+      [id]
+    );
+    if (parseInt(staffCount.rows[0].count) > 0) {
+      return res.status(400).json({ error: `Cannot deactivate department: ${staffCount.rows[0].count} active staff assigned. Reassign them first.` });
+    }
+
     const result = await query(
       `UPDATE departments SET is_active = false, updated_at = CURRENT_TIMESTAMP WHERE id = $1 RETURNING *`,
       [id]

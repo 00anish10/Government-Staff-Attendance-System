@@ -4,4 +4,7 @@ export declare const required: (val: any) => string | null;
 export declare const isEmail: (val: any) => string | null;
 export declare const isPhone: (val: any) => string | null;
 export declare const isDate: (val: any) => string | null;
+export declare const isNumber: (val: any) => string | null;
+export declare const isPositive: (val: any) => string | null;
+export declare const isEnum: (validValues: string[]) => (val: any) => string | null;
 //# sourceMappingURL=validate.d.ts.map

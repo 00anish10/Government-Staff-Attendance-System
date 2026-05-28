@@ -1,7 +1,13 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.requireRole = exports.basicAuth = void 0;
-const basicAuth = (req, res, next) => {
+exports.JWT_SECRET = exports.requireRole = exports.authenticate = void 0;
+const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
+const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-do-not-use-in-production';
+exports.JWT_SECRET = JWT_SECRET;
+const authenticate = (req, res, next) => {
     const authHeader = req.headers.authorization;
     if (!authHeader) {
         return res.status(401).json({ error: 'Authorization header required' });
@@ -11,20 +17,21 @@ const basicAuth = (req, res, next) => {
         return res.status(401).json({ error: 'Invalid authorization format. Use: Bearer <token>' });
     }
     const token = parts[1];
-    const decoded = Buffer.from(token, 'base64').toString('utf-8');
-    const [username, password] = decoded.split(':');
-    if (!username || !password) {
-        return res.status(401).json({ error: 'Invalid credentials format' });
+    try {
+        const decoded = jsonwebtoken_1.default.verify(token, JWT_SECRET);
+        req.user = {
+            id: decoded.id,
+            username: decoded.username,
+            role: decoded.role,
+            staff_id: decoded.staff_id,
+        };
+        next();
     }
-    req.user = {
-        id: 1,
-        username,
-        role: 'admin',
-        staff_id: 1,
-    };
-    next();
+    catch (err) {
+        return res.status(401).json({ error: 'Invalid or expired token' });
+    }
 };
-exports.basicAuth = basicAuth;
+exports.authenticate = authenticate;
 const requireRole = (...roles) => {
     return (req, res, next) => {
         if (!req.user) {

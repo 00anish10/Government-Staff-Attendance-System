@@ -1,4 +1,21 @@
+import bcrypt from 'bcrypt';
 import { query } from '../config/database';
+
+const NEPAL_UTC_OFFSET = 345; // 5h45m
+
+function getNepaliNow(): Date {
+  const now = new Date();
+  const utc = now.getTime() + now.getTimezoneOffset() * 60000;
+  return new Date(utc + NEPAL_UTC_OFFSET * 60000);
+}
+
+function isSaturdayNepal(date: Date): boolean {
+  // Get day of week in Nepal timezone
+  const utc = date.getTime();
+  const nepalMs = utc + NEPAL_UTC_OFFSET * 60000;
+  const nepalDate = new Date(nepalMs);
+  return nepalDate.getUTCDay() === 6; // Saturday
+}
 
 const seed = async () => {
   console.log('Seeding database...');
@@ -51,28 +68,57 @@ const seed = async () => {
     ('HAJ015', 'Sarita Tamang', 'सरिता तामाङ', 'sarita.tamang@gov.np', '9841000015', 'Hetauda', '1996-09-22', '2019-05-10', 22, false, 'female', 10, 4);
   `);
 
-  await query(`INSERT INTO users (username, password_hash, role, staff_id) VALUES ('admin', 'admin123', 'admin', 1)`);
+  const hash = await bcrypt.hash('admin123', 10);
+  await query(`INSERT INTO users (username, password_hash, role, staff_id) VALUES ($1, $2, 'admin', 1)`, ['admin', hash]);
+  const hrHash = await bcrypt.hash('hr123', 10);
+  await query(`INSERT INTO users (username, password_hash, role, staff_id) VALUES ($1, $2, 'hr', 3)`, ['hr', hrHash]);
 
-  const today = new Date().toISOString().split('T')[0];
-  const staffResult = await query(`SELECT id FROM staff`);
-  const staffIds = staffResult.rows.map(r => r.id);
+  const today = getNepaliNow();
+  const staffResult = await query(`SELECT id, date_of_joining FROM staff`);
+  const staffRows = staffResult.rows;
 
-  for (const id of staffIds) {
-    const isPresent = Math.random() > 0.2;
-    const isLate = isPresent && Math.random() > 0.8;
-    const checkInHour = isLate ? 10 : Math.floor(Math.random() * 2) + 8;
-    const checkInMin = Math.floor(Math.random() * 60);
-    const checkOutHour = 17;
-    const checkOutMin = Math.floor(Math.random() * 30);
+  for (const row of staffRows) {
+    const joinDate = new Date(row.date_of_joining);
+    const daysSinceJoining = Math.floor((today.getTime() - joinDate.getTime()) / (1000 * 60 * 60 * 24));
+    const daysToGenerate = Math.min(30, Math.max(1, daysSinceJoining));
 
-    const status = isPresent ? (isLate ? 'late' : 'present') : 'absent';
-    const checkIn = isPresent ? `${today} ${String(checkInHour).padStart(2,'0')}:${String(checkInMin).padStart(2,'0')}:00` : null;
-    const checkOut = isPresent ? `${today} ${String(checkOutHour).padStart(2,'0')}:${String(checkOutMin).padStart(2,'0')}:00` : null;
+    for (let d = 0; d < daysToGenerate; d++) {
+      const date = new Date(today);
+      date.setDate(date.getDate() - d);
+      const dateStr = date.toISOString().split('T')[0];
 
-    await query(
-      `INSERT INTO attendance (staff_id, date, check_in, check_out, status) VALUES ($1, $2, $3, $4, $5)`,
-      [id, today, checkIn, checkOut, status]
-    );
+      if (isSaturdayNepal(date)) {
+        await query(
+          `INSERT INTO attendance (staff_id, date, status) VALUES ($1, $2, 'holiday') ON CONFLICT (staff_id, date) DO NOTHING`,
+          [row.id, dateStr]
+        );
+        continue;
+      }
+
+      const rand = Math.random();
+      let status: string;
+      let checkIn: string | null = null;
+      let checkOut: string | null = null;
+
+      if (rand < 0.55) {
+        status = 'present';
+        checkIn = `${dateStr} ${String(Math.floor(Math.random() * 2) + 8).padStart(2, '0')}:${String(Math.floor(Math.random() * 60)).padStart(2, '0')}:00`;
+        checkOut = `${dateStr} 17:${String(Math.floor(Math.random() * 30)).padStart(2, '0')}:00`;
+      } else if (rand < 0.75) {
+        status = 'late';
+        checkIn = `${dateStr} 10:${String(Math.floor(Math.random() * 30) + 15).padStart(2, '0')}:00`;
+        checkOut = `${dateStr} 17:${String(Math.floor(Math.random() * 30)).padStart(2, '0')}:00`;
+      } else if (rand < 0.88) {
+        status = 'absent';
+      } else {
+        status = 'leave';
+      }
+
+      await query(
+        `INSERT INTO attendance (staff_id, date, check_in, check_out, status) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (staff_id, date) DO NOTHING`,
+        [row.id, dateStr, checkIn, checkOut, status]
+      );
+    }
   }
 
   await query(`

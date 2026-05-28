@@ -27,7 +27,7 @@ export const getAllDesignations = async (req: Request, res: Response, next: Next
       params
     );
 
-    res.json(result.rows);
+    res.json({ data: result.rows });
   } catch (err) {
     next(err);
   }
@@ -48,7 +48,7 @@ export const getDesignationById = async (req: Request, res: Response, next: Next
       return res.status(404).json({ error: 'Designation not found' });
     }
 
-    res.json(result.rows[0]);
+    res.json({ data: result.rows[0] });
   } catch (err) {
     next(err);
   }
@@ -64,7 +64,7 @@ export const createDesignation = async (req: Request, res: Response, next: NextF
       [title, title_np, grade, pay_scale, department_id]
     );
 
-    res.status(201).json(result.rows[0]);
+    res.status(201).json({ data: result.rows[0] });
   } catch (err) {
     next(err);
   }
@@ -86,7 +86,7 @@ export const updateDesignation = async (req: Request, res: Response, next: NextF
       return res.status(404).json({ error: 'Designation not found' });
     }
 
-    res.json(result.rows[0]);
+    res.json({ data: result.rows[0] });
   } catch (err) {
     next(err);
   }
@@ -95,6 +95,15 @@ export const updateDesignation = async (req: Request, res: Response, next: NextF
 export const deleteDesignation = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
+
+    const staffCount = await query(
+      `SELECT COUNT(*) as count FROM staff WHERE designation_id = $1 AND is_active = true`,
+      [id]
+    );
+    if (parseInt(staffCount.rows[0].count) > 0) {
+      return res.status(400).json({ error: `Cannot deactivate designation: ${staffCount.rows[0].count} active staff assigned. Reassign them first.` });
+    }
+
     const result = await query(
       `UPDATE designations SET is_active = false, updated_at = CURRENT_TIMESTAMP WHERE id = $1 RETURNING *`,
       [id]

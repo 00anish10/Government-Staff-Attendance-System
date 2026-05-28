@@ -77,7 +77,7 @@ export const getStaffById = async (req: Request, res: Response, next: NextFuncti
       return res.status(404).json({ error: 'Staff not found' });
     }
 
-    res.json(result.rows[0]);
+    res.json({ data: result.rows[0] });
   } catch (err) {
     next(err);
   }
@@ -101,6 +101,10 @@ export const createStaff = async (req: Request, res: Response, next: NextFunctio
       date_of_birth, date_of_joining, gender, designation_id, department_id
     } = req.body;
 
+    if (new Date(date_of_birth) > new Date(date_of_joining)) {
+      return res.status(400).json({ error: 'Date of birth cannot be after date of joining' });
+    }
+
     const age = calcAgeAtJoining(date_of_birth, date_of_joining);
     const is_minor = age < 18;
 
@@ -113,7 +117,7 @@ export const createStaff = async (req: Request, res: Response, next: NextFunctio
        date_of_birth, date_of_joining, age, is_minor, gender, designation_id, department_id]
     );
 
-    res.status(201).json(result.rows[0]);
+    res.status(201).json({ data: result.rows[0] });
   } catch (err) {
     next(err);
   }
@@ -127,7 +131,14 @@ export const updateStaff = async (req: Request, res: Response, next: NextFunctio
       date_of_birth, date_of_joining, gender, designation_id, department_id, is_active
     } = req.body;
 
-    const age = date_of_birth && date_of_joining ? calcAgeAtJoining(date_of_birth, date_of_joining) : undefined;
+    const dob = date_of_birth ?? (await query(`SELECT date_of_birth FROM staff WHERE id = $1`, [id])).rows[0]?.date_of_birth;
+    const doj = date_of_joining ?? (await query(`SELECT date_of_joining FROM staff WHERE id = $1`, [id])).rows[0]?.date_of_joining;
+
+    if (dob && doj && new Date(dob) > new Date(doj)) {
+      return res.status(400).json({ error: 'Date of birth cannot be after date of joining' });
+    }
+
+    const age = dob && doj ? calcAgeAtJoining(dob, doj) : undefined;
     const is_minor = age !== undefined ? age < 18 : undefined;
 
     const fields: string[] = [];
@@ -164,7 +175,7 @@ export const updateStaff = async (req: Request, res: Response, next: NextFunctio
       return res.status(404).json({ error: 'Staff not found' });
     }
 
-    res.json(result.rows[0]);
+    res.json({ data: result.rows[0] });
   } catch (err) {
     next(err);
   }
@@ -174,7 +185,7 @@ export const deleteStaff = async (req: Request, res: Response, next: NextFunctio
   try {
     const { id } = req.params;
     const result = await query(
-      `UPDATE staff SET is_active = false, updated_at = CURRENT_TIMESTAMP WHERE id = $1 RETURNING *`,
+      `DELETE FROM staff WHERE id = $1 RETURNING *`,
       [id]
     );
 
@@ -182,7 +193,7 @@ export const deleteStaff = async (req: Request, res: Response, next: NextFunctio
       return res.status(404).json({ error: 'Staff not found' });
     }
 
-    res.json({ message: 'Staff deactivated successfully' });
+    res.json({ message: 'Staff deleted successfully' });
   } catch (err) {
     next(err);
   }

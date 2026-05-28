@@ -13,6 +13,9 @@ export default function LeaveList() {
   const [pagination, setPagination] = useState({ page: 1, totalPages: 1, total: 0 });
   const [form, setForm] = useState({ staff_id: '', leave_type: 'annual', start_date: '', end_date: '', reason: '' });
   const [actionLoading, setActionLoading] = useState<number | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [rejectModal, setRejectModal] = useState<{ id: number; staffName: string } | null>(null);
+  const [rejectReason, setRejectReason] = useState('');
 
   const fetchLeaves = () => {
     setLoading(true);
@@ -33,6 +36,15 @@ export default function LeaveList() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!form.staff_id || !form.start_date || !form.end_date || !form.reason.trim()) {
+      alert('Please fill all required fields');
+      return;
+    }
+    if (new Date(form.start_date) > new Date(form.end_date)) {
+      alert('Start date cannot be after end date');
+      return;
+    }
+    setSubmitting(true);
     try {
       await api.leaves.create({ ...form, staff_id: Number(form.staff_id) });
       setShowForm(false);
@@ -40,6 +52,8 @@ export default function LeaveList() {
       fetchLeaves();
     } catch (err: any) {
       alert(err.message);
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -55,11 +69,13 @@ export default function LeaveList() {
     }
   };
 
-  const handleReject = async (id: number) => {
-    const reason = prompt('Enter rejection reason:');
-    setActionLoading(id);
+  const handleReject = async () => {
+    if (!rejectModal) return;
+    setActionLoading(rejectModal.id);
     try {
-      await api.leaves.reject(id, 1, reason || undefined);
+      await api.leaves.reject(rejectModal.id, 1, rejectReason || undefined);
+      setRejectModal(null);
+      setRejectReason('');
       fetchLeaves();
     } catch (err: any) {
       alert(err.message);
@@ -80,7 +96,7 @@ export default function LeaveList() {
           </select>
         </div>
         <button className="btn-primary" onClick={() => setShowForm(!showForm)}>
-          {showForm ? '✕ Cancel' : '+ New Leave Request'}
+          {showForm ? 'Cancel' : '+ New Leave Request'}
         </button>
       </div>
 
@@ -107,7 +123,9 @@ export default function LeaveList() {
           <NepaliDatePicker label="Start Date" required value={form.start_date} onChange={v => setForm(f => ({ ...f, start_date: v }))} />
           <NepaliDatePicker label="End Date" required value={form.end_date} onChange={v => setForm(f => ({ ...f, end_date: v }))} />
           <div className="flex items-end">
-            <button type="submit" className="btn-success w-full">Submit</button>
+            <button type="submit" className="btn-success w-full" disabled={submitting}>
+              {submitting ? 'Submitting...' : 'Submit'}
+            </button>
           </div>
           <div className="md:col-span-5">
             <label className="label">Reason</label>
@@ -149,7 +167,7 @@ export default function LeaveList() {
                       {formatDateShort(l.start_date)} - {formatDateShort(l.end_date)}
                     </td>
                     <td className="table-cell font-medium">{days}</td>
-                    <td className="table-cell text-sm max-w-[200px] truncate">{l.reason}</td>
+                    <td className="table-cell text-sm max-w-[200px] truncate" title={l.reason}>{l.reason}</td>
                     <td className="table-cell">
                       <span className={getStatusBadgeClass(l.status)}>{getStatusLabel(l.status)}</span>
                     </td>
@@ -157,9 +175,13 @@ export default function LeaveList() {
                       {l.status === 'pending' && (
                         <div className="flex gap-2">
                           <button className="btn-success btn-sm" disabled={actionLoading === l.id}
-                            onClick={() => handleApprove(l.id)}>Approve</button>
+                            onClick={() => handleApprove(l.id)}>
+                            {actionLoading === l.id ? '...' : 'Approve'}
+                          </button>
                           <button className="btn-danger btn-sm" disabled={actionLoading === l.id}
-                            onClick={() => handleReject(l.id)}>Reject</button>
+                            onClick={() => setRejectModal({ id: l.id, staffName: l.staff_name || '' })}>
+                            Reject
+                          </button>
                         </div>
                       )}
                       {l.status !== 'pending' && (
@@ -186,6 +208,34 @@ export default function LeaveList() {
             <span className="px-3 py-1.5 text-gray-600">Page {pagination.page} of {pagination.totalPages}</span>
             <button className="btn-outline btn-sm" disabled={pagination.page >= pagination.totalPages}
               onClick={() => setPagination(p => ({ ...p, page: p.page + 1 }))}>Next</button>
+          </div>
+        </div>
+      )}
+
+      {rejectModal && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-md mx-4">
+            <h3 className="font-semibold text-lg mb-2">Reject Leave Request</h3>
+            <p className="text-sm text-gray-500 mb-4">
+              Reject leave for <strong>{rejectModal.staffName}</strong>
+            </p>
+            <label className="label">Rejection Reason (optional)</label>
+            <textarea
+              className="input mb-4"
+              rows={3}
+              value={rejectReason}
+              onChange={e => setRejectReason(e.target.value)}
+              placeholder="Enter reason for rejection..."
+              autoFocus
+            />
+            <div className="flex gap-3 justify-end">
+              <button className="btn-outline" onClick={() => { setRejectModal(null); setRejectReason(''); }}>
+                Cancel
+              </button>
+              <button className="btn-danger" onClick={handleReject} disabled={actionLoading === rejectModal.id}>
+                {actionLoading === rejectModal.id ? 'Rejecting...' : 'Confirm Reject'}
+              </button>
+            </div>
           </div>
         </div>
       )}

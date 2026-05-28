@@ -8,11 +8,11 @@ export default {
     extend: {
       colors: {
         nepali: {
-          red: '#DC143C',
-          blue: '#003893',
+          red: '#DC2626',
+          blue: '#4338CA',
           crimson: '#C41E3A',
           gold: '#FFD700',
-          green: '#006B3F',
+          green: '#16A34A',
         },
       },
     },

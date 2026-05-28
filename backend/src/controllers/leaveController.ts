@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { query } from '../config/database';
+import { getNepaliDateStr } from '../utils/nepaliTime';
 
 export const getLeaveRequests = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -61,13 +62,17 @@ export const createLeaveRequest = async (req: Request, res: Response, next: Next
   try {
     const { staff_id, leave_type, start_date, end_date, reason } = req.body;
 
+    if (new Date(start_date) > new Date(end_date)) {
+      return res.status(400).json({ error: 'Start date cannot be after end date' });
+    }
+
     const result = await query(
       `INSERT INTO leave_requests (staff_id, leave_type, start_date, end_date, reason)
        VALUES ($1, $2, $3, $4, $5) RETURNING *`,
       [staff_id, leave_type, start_date, end_date, reason]
     );
 
-    res.status(201).json(result.rows[0]);
+    res.status(201).json({ data: result.rows[0] });
   } catch (err) {
     next(err);
   }
@@ -81,6 +86,10 @@ export const approveLeave = async (req: Request, res: Response, next: NextFuncti
     const leave = await query(`SELECT * FROM leave_requests WHERE id = $1`, [id]);
     if (leave.rows.length === 0) {
       return res.status(404).json({ error: 'Leave request not found' });
+    }
+
+    if (leave.rows[0].status !== 'pending') {
+      return res.status(400).json({ error: `Leave request is already ${leave.rows[0].status}` });
     }
 
     const result = await query(
@@ -103,7 +112,7 @@ export const approveLeave = async (req: Request, res: Response, next: NextFuncti
       );
     }
 
-    res.json(result.rows[0]);
+    res.json({ data: result.rows[0] });
   } catch (err) {
     next(err);
   }
@@ -119,13 +128,17 @@ export const rejectLeave = async (req: Request, res: Response, next: NextFunctio
       return res.status(404).json({ error: 'Leave request not found' });
     }
 
+    if (leave.rows[0].status !== 'pending') {
+      return res.status(400).json({ error: `Leave request is already ${leave.rows[0].status}` });
+    }
+
     const result = await query(
       `UPDATE leave_requests SET status = 'rejected', approved_by = $1,
        remarks = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3 RETURNING *`,
       [approved_by, remarks, id]
     );
 
-    res.json(result.rows[0]);
+    res.json({ data: result.rows[0] });
   } catch (err) {
     next(err);
   }

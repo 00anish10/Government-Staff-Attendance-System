@@ -1,13 +1,14 @@
 import { Request, Response, NextFunction } from 'express';
 import { query } from '../config/database';
 import { DashboardStats } from '../types';
+import { getNepaliDateStr } from '../utils/nepaliTime';
 
 export const getDashboardStats = async (_req: Request, res: Response, next: NextFunction) => {
   try {
     const totalStaff = await query(`SELECT COUNT(*) as count FROM staff WHERE is_active = true`);
     const departmentCount = await query(`SELECT COUNT(*) as count FROM departments WHERE is_active = true`);
 
-    const today = new Date().toISOString().split('T')[0];
+    const today = getNepaliDateStr();
 
     const attendanceToday = await query(
       `SELECT status, COUNT(*) as count FROM attendance WHERE date = $1 GROUP BY status`,
@@ -59,18 +60,19 @@ export const getDashboardStats = async (_req: Request, res: Response, next: Next
 
 export const getAttendanceTrends = async (_req: Request, res: Response, next: NextFunction) => {
   try {
+    const today = getNepaliDateStr();
     const result = await query(`
       SELECT date,
-             SUM(CASE WHEN status = 'present' THEN 1 ELSE 0 END) as present,
-             SUM(CASE WHEN status = 'late' THEN 1 ELSE 0 END) as late,
-             SUM(CASE WHEN status = 'absent' THEN 1 ELSE 0 END) as absent,
-             SUM(CASE WHEN status = 'leave' THEN 1 ELSE 0 END) as on_leave,
-             COUNT(*) as total
+             SUM(CASE WHEN status = 'present' THEN 1 ELSE 0 END)::int as present,
+             SUM(CASE WHEN status = 'late' THEN 1 ELSE 0 END)::int as late,
+             SUM(CASE WHEN status = 'absent' THEN 1 ELSE 0 END)::int as absent,
+             SUM(CASE WHEN status = 'leave' THEN 1 ELSE 0 END)::int as on_leave,
+             COUNT(*)::int as total
       FROM attendance
-      WHERE date >= CURRENT_DATE - INTERVAL '30 days'
+      WHERE date >= $1::date - INTERVAL '30 days'
       GROUP BY date
       ORDER BY date ASC
-    `);
+    `, [today]);
 
     res.json(result.rows);
   } catch (err) {
@@ -80,16 +82,16 @@ export const getAttendanceTrends = async (_req: Request, res: Response, next: Ne
 
 export const getDepartmentStats = async (_req: Request, res: Response, next: NextFunction) => {
   try {
-    const today = new Date().toISOString().split('T')[0];
+    const today = getNepaliDateStr();
 
     const result = await query(
       `
       SELECT d.id, d.name, d.name_np, d.code,
-             COUNT(s.id) as total_staff,
-             COALESCE(SUM(CASE WHEN a.status = 'present' THEN 1 ELSE 0 END), 0) as present,
-             COALESCE(SUM(CASE WHEN a.status = 'late' THEN 1 ELSE 0 END), 0) as late,
-             COALESCE(SUM(CASE WHEN a.status = 'absent' THEN 1 ELSE 0 END), 0) as absent,
-             COALESCE(SUM(CASE WHEN a.status = 'leave' THEN 1 ELSE 0 END), 0) as on_leave
+             COUNT(s.id)::int as total_staff,
+             COALESCE(SUM(CASE WHEN a.status = 'present' THEN 1 ELSE 0 END), 0)::int as present,
+             COALESCE(SUM(CASE WHEN a.status = 'late' THEN 1 ELSE 0 END), 0)::int as late,
+             COALESCE(SUM(CASE WHEN a.status = 'absent' THEN 1 ELSE 0 END), 0)::int as absent,
+             COALESCE(SUM(CASE WHEN a.status = 'leave' THEN 1 ELSE 0 END), 0)::int as on_leave
       FROM departments d
       LEFT JOIN staff s ON s.department_id = d.id AND s.is_active = true
       LEFT JOIN attendance a ON a.staff_id = s.id AND a.date = $1

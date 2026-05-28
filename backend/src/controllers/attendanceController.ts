@@ -1,5 +1,9 @@
 import { Request, Response, NextFunction } from 'express';
 import { query } from '../config/database';
+import { getNepaliDateStr, getNepaliISOString, isLate } from '../utils/nepaliTime';
+
+const OFFICE_START_TIME = process.env.OFFICE_START_TIME || '09:00';
+const LATE_AFTER_MINUTES = parseInt(process.env.LATE_AFTER_MINUTES || '75', 10);
 
 export const getAttendance = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -75,7 +79,7 @@ export const getAttendanceByStaff = async (req: Request, res: Response, next: Ne
       [id, limit, offset]
     );
 
-    res.json(result.rows);
+    res.json({ data: result.rows });
   } catch (err) {
     next(err);
   }
@@ -84,8 +88,16 @@ export const getAttendanceByStaff = async (req: Request, res: Response, next: Ne
 export const checkIn = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { staff_id } = req.body;
-    const today = new Date().toISOString().split('T')[0];
-    const now = new Date().toISOString();
+    const today = getNepaliDateStr();
+    const now = getNepaliISOString();
+
+    const staffExists = await query(`SELECT id, is_active FROM staff WHERE id = $1`, [staff_id]);
+    if (staffExists.rows.length === 0) {
+      return res.status(404).json({ error: 'Staff not found' });
+    }
+    if (!staffExists.rows[0].is_active) {
+      return res.status(400).json({ error: 'Cannot check in: staff is inactive' });
+    }
 
     const existing = await query(
       `SELECT * FROM attendance WHERE staff_id = $1 AND date = $2`,
@@ -96,8 +108,7 @@ export const checkIn = async (req: Request, res: Response, next: NextFunction) =
       return res.status(400).json({ error: 'Already checked in today' });
     }
 
-    const hour = new Date().getHours();
-    const status = hour >= 10 ? 'late' : 'present';
+    const status = isLate(OFFICE_START_TIME, LATE_AFTER_MINUTES) ? 'late' : 'present';
 
     const result = await query(
       `INSERT INTO attendance (staff_id, date, check_in, status)
@@ -105,7 +116,7 @@ export const checkIn = async (req: Request, res: Response, next: NextFunction) =
       [staff_id, today, now, status]
     );
 
-    res.status(201).json(result.rows[0]);
+    res.status(201).json({ data: result.rows[0] });
   } catch (err) {
     next(err);
   }
@@ -114,8 +125,13 @@ export const checkIn = async (req: Request, res: Response, next: NextFunction) =
 export const checkOut = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { staff_id } = req.body;
-    const today = new Date().toISOString().split('T')[0];
-    const now = new Date().toISOString();
+    const today = getNepaliDateStr();
+    const now = getNepaliISOString();
+
+    const staffExists = await query(`SELECT id, is_active FROM staff WHERE id = $1`, [staff_id]);
+    if (staffExists.rows.length === 0) {
+      return res.status(404).json({ error: 'Staff not found' });
+    }
 
     const existing = await query(
       `SELECT * FROM attendance WHERE staff_id = $1 AND date = $2`,
@@ -136,7 +152,7 @@ export const checkOut = async (req: Request, res: Response, next: NextFunction) 
       [now, staff_id, today]
     );
 
-    res.json(result.rows[0]);
+    res.json({ data: result.rows[0] });
   } catch (err) {
     next(err);
   }
@@ -145,6 +161,11 @@ export const checkOut = async (req: Request, res: Response, next: NextFunction) 
 export const markAttendance = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { staff_id, date, status, check_in, check_out, remarks } = req.body;
+
+    const staffExists = await query(`SELECT id FROM staff WHERE id = $1`, [staff_id]);
+    if (staffExists.rows.length === 0) {
+      return res.status(404).json({ error: 'Staff not found' });
+    }
 
     const existing = await query(
       `SELECT * FROM attendance WHERE staff_id = $1 AND date = $2`,
@@ -158,7 +179,7 @@ export const markAttendance = async (req: Request, res: Response, next: NextFunc
          WHERE staff_id = $5 AND date = $6 RETURNING *`,
         [status, check_in || null, check_out || null, remarks, staff_id, date]
       );
-      return res.json(result.rows[0]);
+      return res.json({ data: result.rows[0] });
     }
 
     const result = await query(
@@ -167,7 +188,7 @@ export const markAttendance = async (req: Request, res: Response, next: NextFunc
       [staff_id, date, check_in || null, check_out || null, status, remarks]
     );
 
-    res.status(201).json(result.rows[0]);
+    res.status(201).json({ data: result.rows[0] });
   } catch (err) {
     next(err);
   }
@@ -175,7 +196,7 @@ export const markAttendance = async (req: Request, res: Response, next: NextFunc
 
 export const getTodayAttendance = async (_req: Request, res: Response, next: NextFunction) => {
   try {
-    const today = new Date().toISOString().split('T')[0];
+    const today = getNepaliDateStr();
 
     const result = await query(
       `SELECT a.*, s.full_name, s.employee_id, s.full_name_np,

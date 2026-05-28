@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
 import { Staff, Department } from '../types';
-import { calculateAge, getStatusBadgeClass } from '../utils/helpers';
+import { calcAgeAtDate, transliterateToNepali } from '../utils/helpers';
 import NepaliDatePicker from '../components/NepaliDatePicker';
 
 export default function StaffList() {
@@ -15,20 +15,24 @@ export default function StaffList() {
   const [deptFilter, setDeptFilter] = useState('');
   const [pagination, setPagination] = useState({ page: 1, totalPages: 1, total: 0 });
   const [showForm, setShowForm] = useState(false);
+  const [editing, setEditing] = useState<Staff | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState<number | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [nepaliTouched, setNepaliTouched] = useState(false);
   const [form, setForm] = useState({
     employee_id: '', full_name: '', full_name_np: '', email: '', phone: '',
     address: '', date_of_birth: '', date_of_joining: '', gender: 'male' as string,
     designation_id: '', department_id: '',
   });
 
-  const fetchStaff = () => {
+  const fetchStaff = useCallback(() => {
     setLoading(true);
     api.staff.list({ page: pagination.page, limit: 20, search: search || undefined, department_id: deptFilter || undefined })
       .then(res => {
         setStaff(res.data);
         setPagination(res.pagination);
       }).catch(console.error).finally(() => setLoading(false));
-  };
+  }, [pagination.page, search, deptFilter]);
 
   useEffect(() => {
     Promise.all([
@@ -46,26 +50,96 @@ export default function StaffList() {
 
   useEffect(() => {
     fetchStaff();
-  }, [pagination.page, deptFilter]);
+  }, [fetchStaff]);
 
   const handleSearch = () => {
     setPagination(p => ({ ...p, page: 1 }));
-    fetchStaff();
   };
+
+  const handleEdit = (s: Staff) => {
+    setEditing(s);
+    setNepaliTouched(true);
+    setForm({
+      employee_id: s.employee_id,
+      full_name: s.full_name,
+      full_name_np: s.full_name_np,
+      email: s.email,
+      phone: s.phone,
+      address: s.address || '',
+      date_of_birth: s.date_of_birth,
+      date_of_joining: s.date_of_joining,
+      gender: s.gender,
+      designation_id: String(s.designation_id),
+      department_id: String(s.department_id),
+    });
+    setShowForm(true);
+  };
+
+  const resetForm = () => {
+    setForm({ employee_id: '', full_name: '', full_name_np: '', email: '', phone: '', address: '', date_of_birth: '', date_of_joining: '', gender: 'male', designation_id: '', department_id: '' });
+    setEditing(null);
+    setShowForm(false);
+    setNepaliTouched(false);
+  };
+
+  useEffect(() => {
+    if (!nepaliTouched) {
+      const np = form.full_name ? transliterateToNepali(form.full_name) : '';
+      setForm(f => f.full_name_np !== np ? { ...f, full_name_np: np } : f);
+    }
+  }, [form.full_name, nepaliTouched]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!form.employee_id.trim() || !form.full_name.trim() || !form.full_name_np.trim()) {
+      alert('Employee ID, Name (English), and Name (Nepali) are required');
+      return;
+    }
+
+    if (!form.date_of_birth || !form.date_of_joining) {
+      alert('Date of Birth and Date of Joining are required');
+      return;
+    }
+
+    const ageAtJoining = calcAgeAtDate(form.date_of_birth, form.date_of_joining);
+    if (ageAtJoining < 18) {
+      alert('Staff must be at least 18 years old at the time of joining. Please check the Date of Birth or Date of Joining.');
+      return;
+    }
+
+    setSubmitting(true);
     try {
-      await api.staff.create({
+      const payload = {
         ...form,
         designation_id: form.designation_id ? Number(form.designation_id) : null,
         department_id: form.department_id ? Number(form.department_id) : null,
-      });
-      setShowForm(false);
-      setForm({ employee_id: '', full_name: '', full_name_np: '', email: '', phone: '', address: '', date_of_birth: '', date_of_joining: '', gender: 'male', designation_id: '', department_id: '' });
+      };
+
+      if (editing) {
+        await api.staff.update(editing.id, payload);
+      } else {
+        await api.staff.create(payload);
+      }
+      resetForm();
       fetchStaff();
     } catch (err: any) {
       alert(err.message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleDelete = async (id: number, name: string) => {
+    if (!confirm(`Are you sure you want to delete "${name}"? This action cannot be undone.`)) return;
+    setDeleteLoading(id);
+    try {
+      await api.staff.delete(id);
+      fetchStaff();
+    } catch (err: any) {
+      alert(err.message);
+    } finally {
+      setDeleteLoading(null);
     }
   };
 
@@ -80,14 +154,14 @@ export default function StaffList() {
             onChange={e => setSearch(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && handleSearch()}
           />
-          <select className="input max-w-[200px]" value={deptFilter} onChange={e => setDeptFilter(e.target.value)}>
+          <select className="input max-w-[200px]" value={deptFilter} onChange={e => { setDeptFilter(e.target.value); setPagination(p => ({ ...p, page: 1 })); }}>
             <option value="">All Departments</option>
             {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
           </select>
           <button className="btn-primary btn-sm" onClick={handleSearch}>Search</button>
         </div>
-        <button className="btn-primary" onClick={() => setShowForm(!showForm)}>
-          {showForm ? '✕ Cancel' : '+ Add Staff'}
+        <button className="btn-primary" onClick={() => { resetForm(); setShowForm(!showForm); }}>
+          {showForm ? 'Cancel' : '+ Add Staff'}
         </button>
       </div>
 
@@ -103,7 +177,7 @@ export default function StaffList() {
           </div>
           <div>
             <label className="label">Full Name (Nepali)</label>
-            <input className="input" required value={form.full_name_np} onChange={e => setForm(f => ({ ...f, full_name_np: e.target.value }))} />
+            <input className="input" required value={form.full_name_np} onChange={e => { setNepaliTouched(true); setForm(f => ({ ...f, full_name_np: e.target.value })); }} />
           </div>
           <div>
             <label className="label">Email</label>
@@ -153,8 +227,13 @@ export default function StaffList() {
               ))}
             </select>
           </div>
-          <div className="flex items-end">
-            <button type="submit" className="btn-success w-full">Save Staff</button>
+          <div className="flex items-end gap-2">
+            {editing && (
+              <button type="button" className="btn-outline w-full" onClick={resetForm}>Cancel</button>
+            )}
+            <button type="submit" className={`w-full ${editing ? 'btn-primary' : 'btn-success'}`} disabled={submitting}>
+              {submitting ? 'Saving...' : editing ? 'Update Staff' : 'Save Staff'}
+            </button>
           </div>
         </form>
       )}
@@ -170,7 +249,7 @@ export default function StaffList() {
                 <th className="table-header">Designation</th>
                 <th className="table-header">Email</th>
                 <th className="table-header">Phone</th>
-                <th className="table-header">Age</th>
+                <th className="table-header">Age (at join)</th>
                 <th className="table-header">Status</th>
                 <th className="table-header"></th>
               </tr>
@@ -189,16 +268,24 @@ export default function StaffList() {
                   <td className="table-cell">{s.designation_title || '—'}</td>
                   <td className="table-cell text-xs">{s.email}</td>
                   <td className="table-cell">{s.phone}</td>
-                  <td className="table-cell">{calculateAge(s.date_of_birth)}</td>
+                  <td className="table-cell">{s.age ?? '—'}</td>
                   <td className="table-cell">
                     <span className={s.is_active ? 'badge-success' : 'badge-danger'}>
                       {s.is_active ? 'Active' : 'Inactive'}
                     </span>
                   </td>
                   <td className="table-cell">
-                    <button className="text-nepali-blue hover:underline text-xs" onClick={e => { e.stopPropagation(); navigate(`/staff/${s.id}`); }}>
-                      View
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button className="text-nepali-blue hover:underline text-xs" onClick={e => { e.stopPropagation(); navigate(`/staff/${s.id}`); }}>
+                        View
+                      </button>
+                      <button className="text-green-600 hover:underline text-xs" onClick={e => { e.stopPropagation(); handleEdit(s); }}>
+                        Edit
+                      </button>
+                      <button className="text-nepali-red hover:underline text-xs" disabled={deleteLoading === s.id} onClick={e => { e.stopPropagation(); handleDelete(s.id, s.full_name); }}>
+                        {deleteLoading === s.id ? '...' : 'Delete'}
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}

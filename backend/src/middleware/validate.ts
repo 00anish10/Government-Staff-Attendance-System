@@ -47,3 +47,26 @@ export const isDate = (val: any): string | null => {
   }
   return null;
 };
+
+export const isNumber = (val: any): string | null => {
+  if (val !== undefined && val !== null && val !== '' && isNaN(Number(val))) {
+    return 'Must be a number';
+  }
+  return null;
+};
+
+export const isPositive = (val: any): string | null => {
+  if (val !== undefined && val !== null && val !== '' && Number(val) <= 0) {
+    return 'Must be a positive number';
+  }
+  return null;
+};
+
+export const isEnum = (validValues: string[]) => {
+  return (val: any): string | null => {
+    if (val && !validValues.includes(val)) {
+      return `Must be one of: ${validValues.join(', ')}`;
+    }
+    return null;
+  };
+};

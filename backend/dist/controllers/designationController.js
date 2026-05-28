@@ -21,7 +21,7 @@ const getAllDesignations = async (req, res, next) => {
        ${whereClause}
        GROUP BY dg.id, dep.name, dep.name_np
        ORDER BY dg.grade ASC, dg.title ASC`, params);
-        res.json(result.rows);
+        res.json({ data: result.rows });
     }
     catch (err) {
         next(err);
@@ -38,7 +38,7 @@ const getDesignationById = async (req, res, next) => {
         if (result.rows.length === 0) {
             return res.status(404).json({ error: 'Designation not found' });
         }
-        res.json(result.rows[0]);
+        res.json({ data: result.rows[0] });
     }
     catch (err) {
         next(err);
@@ -50,7 +50,7 @@ const createDesignation = async (req, res, next) => {
         const { title, title_np, grade, pay_scale, department_id } = req.body;
         const result = await (0, database_1.query)(`INSERT INTO designations (title, title_np, grade, pay_scale, department_id)
        VALUES ($1, $2, $3, $4, $5) RETURNING *`, [title, title_np, grade, pay_scale, department_id]);
-        res.status(201).json(result.rows[0]);
+        res.status(201).json({ data: result.rows[0] });
     }
     catch (err) {
         next(err);
@@ -67,7 +67,7 @@ const updateDesignation = async (req, res, next) => {
         if (result.rows.length === 0) {
             return res.status(404).json({ error: 'Designation not found' });
         }
-        res.json(result.rows[0]);
+        res.json({ data: result.rows[0] });
     }
     catch (err) {
         next(err);
@@ -77,6 +77,10 @@ exports.updateDesignation = updateDesignation;
 const deleteDesignation = async (req, res, next) => {
     try {
         const { id } = req.params;
+        const staffCount = await (0, database_1.query)(`SELECT COUNT(*) as count FROM staff WHERE designation_id = $1 AND is_active = true`, [id]);
+        if (parseInt(staffCount.rows[0].count) > 0) {
+            return res.status(400).json({ error: `Cannot deactivate designation: ${staffCount.rows[0].count} active staff assigned. Reassign them first.` });
+        }
         const result = await (0, database_1.query)(`UPDATE designations SET is_active = false, updated_at = CURRENT_TIMESTAMP WHERE id = $1 RETURNING *`, [id]);
         if (result.rows.length === 0) {
             return res.status(404).json({ error: 'Designation not found' });

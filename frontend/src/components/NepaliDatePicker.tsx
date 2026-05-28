@@ -20,6 +20,7 @@ export default function NepaliDatePicker({ value, onChange, label, required, cla
   const [bsMonth, setBsMonth] = useState(initial?.month ?? today?.month ?? 1);
   const [bsDay, setBsDay] = useState(initial?.day ?? today?.day ?? 1);
   const [open, setOpen] = useState(false);
+  const [hasInteracted, setHasInteracted] = useState(false);
 
   const years = getBsYearRange();
   const maxDay = getDaysInBsMonth(bsYear, bsMonth);
@@ -30,15 +31,15 @@ export default function NepaliDatePicker({ value, onChange, label, required, cla
     }
   }, [bsYear, bsMonth, maxDay, bsDay]);
 
-  useEffect(() => {
-    const ad = bsToAdDateStr(bsYear, bsMonth, Math.min(bsDay, maxDay));
+  const emitChange = (y: number, m: number, d: number) => {
+    const ad = bsToAdDateStr(y, m, d);
     if (ad) onChange(ad);
-  }, []);
+    setHasInteracted(true);
+  };
 
   const handleYearChange = (y: number) => {
     setBsYear(y);
-    const ad = bsToAdDateStr(y, bsMonth, Math.min(bsDay, getDaysInBsMonth(y, bsMonth)));
-    if (ad) onChange(ad);
+    emitChange(y, bsMonth, Math.min(bsDay, getDaysInBsMonth(y, bsMonth)));
   };
 
   const handleMonthChange = (m: number) => {
@@ -46,14 +47,12 @@ export default function NepaliDatePicker({ value, onChange, label, required, cla
     const max = getDaysInBsMonth(bsYear, m);
     const day = Math.min(bsDay, max);
     setBsDay(day);
-    const ad = bsToAdDateStr(bsYear, m, day);
-    if (ad) onChange(ad);
+    emitChange(bsYear, m, day);
   };
 
   const handleDayChange = (d: number) => {
     setBsDay(d);
-    const ad = bsToAdDateStr(bsYear, bsMonth, d);
-    if (ad) onChange(ad);
+    emitChange(bsYear, bsMonth, d);
   };
 
   const displayText = value

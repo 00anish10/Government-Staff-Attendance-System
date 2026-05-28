@@ -39,6 +39,8 @@ const createTables = async () => {
       address TEXT,
       date_of_birth DATE NOT NULL,
       date_of_joining DATE NOT NULL,
+      age INTEGER NOT NULL DEFAULT 0,
+      is_minor BOOLEAN DEFAULT false,
       gender VARCHAR(10) CHECK (gender IN ('male', 'female', 'other')) NOT NULL,
       designation_id INTEGER REFERENCES designations(id) ON DELETE SET NULL,
       department_id INTEGER REFERENCES departments(id) ON DELETE SET NULL,
@@ -47,6 +49,13 @@ const createTables = async () => {
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
+  `);
+    await (0, database_1.query)(`
+    DO $$ BEGIN
+      IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'chk_min_age') THEN
+        ALTER TABLE staff ADD CONSTRAINT chk_min_age CHECK (EXTRACT(YEAR FROM age(date_of_joining, date_of_birth)) >= 18) NOT VALID;
+      END IF;
+    END $$;
   `);
     await (0, database_1.query)(`
     CREATE TABLE IF NOT EXISTS attendance (
@@ -89,24 +98,12 @@ const createTables = async () => {
       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
   `);
-    await (0, database_1.query)(`
-    CREATE INDEX IF NOT EXISTS idx_attendance_staff_date ON attendance(staff_id, date);
-  `);
-    await (0, database_1.query)(`
-    CREATE INDEX IF NOT EXISTS idx_attendance_date ON attendance(date);
-  `);
-    await (0, database_1.query)(`
-    CREATE INDEX IF NOT EXISTS idx_leave_staff ON leave_requests(staff_id);
-  `);
-    await (0, database_1.query)(`
-    CREATE INDEX IF NOT EXISTS idx_leave_status ON leave_requests(status);
-  `);
-    await (0, database_1.query)(`
-    CREATE INDEX IF NOT EXISTS idx_staff_department ON staff(department_id);
-  `);
-    await (0, database_1.query)(`
-    CREATE INDEX IF NOT EXISTS idx_staff_designation ON staff(designation_id);
-  `);
+    await (0, database_1.query)(`CREATE INDEX IF NOT EXISTS idx_attendance_staff_date ON attendance(staff_id, date)`);
+    await (0, database_1.query)(`CREATE INDEX IF NOT EXISTS idx_attendance_date ON attendance(date)`);
+    await (0, database_1.query)(`CREATE INDEX IF NOT EXISTS idx_leave_staff ON leave_requests(staff_id)`);
+    await (0, database_1.query)(`CREATE INDEX IF NOT EXISTS idx_leave_status ON leave_requests(status)`);
+    await (0, database_1.query)(`CREATE INDEX IF NOT EXISTS idx_staff_department ON staff(department_id)`);
+    await (0, database_1.query)(`CREATE INDEX IF NOT EXISTS idx_staff_designation ON staff(designation_id)`);
     console.log('Migrations completed successfully!');
     process.exit(0);
 };

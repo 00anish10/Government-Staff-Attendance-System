@@ -1,0 +1,78 @@
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.getMe = exports.login = void 0;
+const bcrypt_1 = __importDefault(require("bcrypt"));
+const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
+const database_1 = require("../config/database");
+const auth_1 = require("../middleware/auth");
+const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '24h';
+const login = async (req, res, next) => {
+    try {
+        const { username, password } = req.body;
+        if (!username || !password) {
+            return res.status(400).json({ error: 'Username and password are required' });
+        }
+        const result = await (0, database_1.query)(`SELECT u.id, u.username, u.password_hash, u.role, u.staff_id, s.full_name, s.full_name_np, s.profile_image
+       FROM users u
+       LEFT JOIN staff s ON u.staff_id = s.id
+       WHERE u.username = $1 AND u.is_active = true`, [username]);
+        if (result.rows.length === 0) {
+            return res.status(401).json({ error: 'Invalid username or password' });
+        }
+        const user = result.rows[0];
+        const passwordValid = await bcrypt_1.default.compare(password, user.password_hash);
+        if (!passwordValid) {
+            return res.status(401).json({ error: 'Invalid username or password' });
+        }
+        const payload = {
+            id: user.id,
+            username: user.username,
+            role: user.role,
+            staff_id: user.staff_id,
+        };
+        const token = jsonwebtoken_1.default.sign(payload, auth_1.JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
+        res.json({
+            data: {
+                token,
+                user: {
+                    id: user.id,
+                    username: user.username,
+                    role: user.role,
+                    staff_id: user.staff_id,
+                    full_name: user.full_name,
+                    full_name_np: user.full_name_np,
+                    profile_image: user.profile_image,
+                },
+            },
+        });
+    }
+    catch (err) {
+        next(err);
+    }
+};
+exports.login = login;
+const getMe = async (req, res, next) => {
+    try {
+        const authReq = req;
+        const userId = authReq.user?.id;
+        if (!userId) {
+            return res.status(401).json({ error: 'Not authenticated' });
+        }
+        const result = await (0, database_1.query)(`SELECT u.id, u.username, u.role, u.staff_id, s.full_name, s.full_name_np, s.profile_image
+       FROM users u
+       LEFT JOIN staff s ON u.staff_id = s.id
+       WHERE u.id = $1`, [userId]);
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+        res.json({ data: result.rows[0] });
+    }
+    catch (err) {
+        next(err);
+    }
+};
+exports.getMe = getMe;
+//# sourceMappingURL=authController.js.map
