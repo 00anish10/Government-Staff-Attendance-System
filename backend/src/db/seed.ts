@@ -33,22 +33,22 @@ const seed = async () => {
   `);
 
   await query(`
-    INSERT INTO staff (employee_id, full_name, full_name_np, email, phone, address, date_of_birth, date_of_joining, gender, designation_id, department_id) VALUES
-    ('HAJ001', 'Ram Prasad Sharma', 'राम प्रसाद शर्मा', 'ram.sharma@gov.np', '9841000001', 'Kathmandu', '1975-03-15', '2000-06-01', 'male', 1, 1),
-    ('HAJ002', 'Sita Devi Adhikari', 'सीता देवी अधिकारी', 'sita.adhikari@gov.np', '9841000002', 'Lalitpur', '1980-07-22', '2005-09-15', 'female', 2, 1),
-    ('HAJ003', 'Hari Bahadur Thapa', 'हरि बहादुर थापा', 'hari.thapa@gov.np', '9841000003', 'Pokhara', '1985-11-10', '2008-03-20', 'male', 3, 2),
-    ('HAJ004', 'Gita Kumari Poudel', 'गीता कुमारी पौडेल', 'gita.poudel@gov.np', '9841000004', 'Biratnagar', '1990-01-05', '2012-07-10', 'female', 4, 2),
-    ('HAJ005', 'Krishna Prasad Ghimire', 'कृष्ण प्रसाद घिमिरे', 'krishna.ghimire@gov.np', '9841000005', 'Chitwan', '1982-09-18', '2006-11-25', 'male', 5, 3),
-    ('HAJ006', 'Maya Devi Sharma', 'माया देवी शर्मा', 'maya.sharma@gov.np', '9841000006', 'Kathmandu', '1988-04-12', '2010-02-01', 'female', 6, 3),
-    ('HAJ007', 'Rajendra Kumar Singh', 'राजेन्द्र कुमार सिंह', 'rajendra.singh@gov.np', '9841000007', 'Janakpur', '1978-08-30', '2001-05-15', 'male', 7, 4),
-    ('HAJ008', 'Sunita Rai', 'सुनिता राई', 'sunita.rai@gov.np', '9841000008', 'Dharan', '1992-12-25', '2015-09-01', 'female', 8, 4),
-    ('HAJ009', 'Prakash Neupane', 'प्रकाश न्यौपाने', 'prakash.neupane@gov.np', '9841000009', 'Butwal', '1986-06-14', '2009-04-10', 'male', 9, 5),
-    ('HAJ010', 'Anita Gurung', 'अनिता गुरुङ', 'anita.gurung@gov.np', '9841000010', 'Pokhara', '1995-02-28', '2018-08-15', 'female', 10, 5),
-    ('HAJ011', 'Bishnu Prasad Pokharel', 'विष्णु प्रसाद पोखरेल', 'bishnu.pokharel@gov.np', '9841000011', 'Nepalgunj', '1983-10-05', '2007-01-20', 'male', 11, 6),
-    ('HAJ012', 'Deepak Bhandari', 'दीपक भण्डारी', 'deepak.bhandari@gov.np', '9841000012', 'Kathmandu', '1991-05-20', '2014-06-01', 'male', 12, 6),
-    ('HAJ013', 'Rekha Thapa', 'रेखा थापा', 'rekha.thapa@gov.np', '9841000013', 'Lalitpur', '1987-03-08', '2011-10-15', 'female', 13, 1),
-    ('HAJ014', 'Mohan Khadka', 'मोहन खड्का', 'mohan.khadka@gov.np', '9841000014', 'Dhangadhi', '1993-07-17', '2016-03-01', 'male', 4, 2),
-    ('HAJ015', 'Sarita Tamang', 'सरिता तामाङ', 'sarita.tamang@gov.np', '9841000015', 'Hetauda', '1996-09-22', '2019-05-10', 'female', 10, 4);
+    INSERT INTO staff (employee_id, full_name, full_name_np, email, phone, address, date_of_birth, date_of_joining, age, is_minor, gender, designation_id, department_id) VALUES
+    ('HAJ001', 'Ram Prasad Sharma', 'राम प्रसाद शर्मा', 'ram.sharma@gov.np', '9841000001', 'Kathmandu', '1975-03-15', '2000-06-01', 25, false, 'male', 1, 1),
+    ('HAJ002', 'Sita Devi Adhikari', 'सीता देवी अधिकारी', 'sita.adhikari@gov.np', '9841000002', 'Lalitpur', '1980-07-22', '2005-09-15', 25, false, 'female', 2, 1),
+    ('HAJ003', 'Hari Bahadur Thapa', 'हरि बहादुर थापा', 'hari.thapa@gov.np', '9841000003', 'Pokhara', '1985-11-10', '2008-03-20', 22, false, 'male', 3, 2),
+    ('HAJ004', 'Gita Kumari Poudel', 'गीता कुमारी पौडेल', 'gita.poudel@gov.np', '9841000004', 'Biratnagar', '1990-01-05', '2012-07-10', 22, false, 'female', 4, 2),
+    ('HAJ005', 'Krishna Prasad Ghimire', 'कृष्ण प्रसाद घिमिरे', 'krishna.ghimire@gov.np', '9841000005', 'Chitwan', '1982-09-18', '2006-11-25', 24, false, 'male', 5, 3),
+    ('HAJ006', 'Maya Devi Sharma', 'माया देवी शर्मा', 'maya.sharma@gov.np', '9841000006', 'Kathmandu', '1988-04-12', '2010-02-01', 21, false, 'female', 6, 3),
+    ('HAJ007', 'Rajendra Kumar Singh', 'राजेन्द्र कुमार सिंह', 'rajendra.singh@gov.np', '9841000007', 'Janakpur', '1978-08-30', '2001-05-15', 22, false, 'male', 7, 4),
+    ('HAJ008', 'Sunita Rai', 'सुनिता राई', 'sunita.rai@gov.np', '9841000008', 'Dharan', '1992-12-25', '2015-09-01', 22, false, 'female', 8, 4),
+    ('HAJ009', 'Prakash Neupane', 'प्रकाश न्यौपाने', 'prakash.neupane@gov.np', '9841000009', 'Butwal', '1986-06-14', '2009-04-10', 22, false, 'male', 9, 5),
+    ('HAJ010', 'Anita Gurung', 'अनिता गुरुङ', 'anita.gurung@gov.np', '9841000010', 'Pokhara', '1995-02-28', '2018-08-15', 23, false, 'female', 10, 5),
+    ('HAJ011', 'Bishnu Prasad Pokharel', 'विष्णु प्रसाद पोखरेल', 'bishnu.pokharel@gov.np', '9841000011', 'Nepalgunj', '1983-10-05', '2007-01-20', 23, false, 'male', 11, 6),
+    ('HAJ012', 'Deepak Bhandari', 'दीपक भण्डारी', 'deepak.bhandari@gov.np', '9841000012', 'Kathmandu', '1991-05-20', '2014-06-01', 23, false, 'male', 12, 6),
+    ('HAJ013', 'Rekha Thapa', 'रेखा थापा', 'rekha.thapa@gov.np', '9841000013', 'Lalitpur', '1987-03-08', '2011-10-15', 24, false, 'female', 13, 1),
+    ('HAJ014', 'Mohan Khadka', 'मोहन खड्का', 'mohan.khadka@gov.np', '9841000014', 'Dhangadhi', '1993-07-17', '2016-03-01', 22, false, 'male', 4, 2),
+    ('HAJ015', 'Sarita Tamang', 'सरिता तामाङ', 'sarita.tamang@gov.np', '9841000015', 'Hetauda', '1996-09-22', '2019-05-10', 22, false, 'female', 10, 4);
   `);
 
   await query(`INSERT INTO users (username, password_hash, role, staff_id) VALUES ('admin', 'admin123', 'admin', 1)`);

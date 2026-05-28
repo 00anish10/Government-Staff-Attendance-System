@@ -83,6 +83,17 @@ export const getStaffById = async (req: Request, res: Response, next: NextFuncti
   }
 };
 
+const calcAgeAtJoining = (dob: string, doj: string): number => {
+  const birth = new Date(dob);
+  const joining = new Date(doj);
+  let age = joining.getFullYear() - birth.getFullYear();
+  const monthDiff = joining.getMonth() - birth.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && joining.getDate() < birth.getDate())) {
+    age--;
+  }
+  return age;
+};
+
 export const createStaff = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const {
@@ -90,13 +101,16 @@ export const createStaff = async (req: Request, res: Response, next: NextFunctio
       date_of_birth, date_of_joining, gender, designation_id, department_id
     } = req.body;
 
+    const age = calcAgeAtJoining(date_of_birth, date_of_joining);
+    const is_minor = age < 18;
+
     const result = await query(
       `INSERT INTO staff (employee_id, full_name, full_name_np, email, phone, address,
-        date_of_birth, date_of_joining, gender, designation_id, department_id)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+        date_of_birth, date_of_joining, age, is_minor, gender, designation_id, department_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
        RETURNING *`,
       [employee_id, full_name, full_name_np, email, phone, address,
-       date_of_birth, date_of_joining, gender, designation_id, department_id]
+       date_of_birth, date_of_joining, age, is_minor, gender, designation_id, department_id]
     );
 
     res.status(201).json(result.rows[0]);
@@ -113,13 +127,37 @@ export const updateStaff = async (req: Request, res: Response, next: NextFunctio
       date_of_birth, date_of_joining, gender, designation_id, department_id, is_active
     } = req.body;
 
+    const age = date_of_birth && date_of_joining ? calcAgeAtJoining(date_of_birth, date_of_joining) : undefined;
+    const is_minor = age !== undefined ? age < 18 : undefined;
+
+    const fields: string[] = [];
+    const params: any[] = [];
+    let idx = 1;
+
+    if (full_name !== undefined) { fields.push(`full_name = $${idx++}`); params.push(full_name); }
+    if (full_name_np !== undefined) { fields.push(`full_name_np = $${idx++}`); params.push(full_name_np); }
+    if (email !== undefined) { fields.push(`email = $${idx++}`); params.push(email); }
+    if (phone !== undefined) { fields.push(`phone = $${idx++}`); params.push(phone); }
+    if (address !== undefined) { fields.push(`address = $${idx++}`); params.push(address); }
+    if (date_of_birth !== undefined) { fields.push(`date_of_birth = $${idx++}`); params.push(date_of_birth); }
+    if (date_of_joining !== undefined) { fields.push(`date_of_joining = $${idx++}`); params.push(date_of_joining); }
+    if (age !== undefined) { fields.push(`age = $${idx++}`); params.push(age); }
+    if (is_minor !== undefined) { fields.push(`is_minor = $${idx++}`); params.push(is_minor); }
+    if (gender !== undefined) { fields.push(`gender = $${idx++}`); params.push(gender); }
+    if (designation_id !== undefined) { fields.push(`designation_id = $${idx++}`); params.push(designation_id); }
+    if (department_id !== undefined) { fields.push(`department_id = $${idx++}`); params.push(department_id); }
+    if (is_active !== undefined) { fields.push(`is_active = $${idx++}`); params.push(is_active); }
+
+    if (fields.length === 0) {
+      return res.status(400).json({ error: 'No fields to update' });
+    }
+
+    fields.push(`updated_at = CURRENT_TIMESTAMP`);
+    params.push(id);
+
     const result = await query(
-      `UPDATE staff SET full_name = $1, full_name_np = $2, email = $3, phone = $4,
-        address = $5, date_of_birth = $6, date_of_joining = $7, gender = $8,
-        designation_id = $9, department_id = $10, is_active = $11, updated_at = CURRENT_TIMESTAMP
-       WHERE id = $12 RETURNING *`,
-      [full_name, full_name_np, email, phone, address,
-       date_of_birth, date_of_joining, gender, designation_id, department_id, is_active, id]
+      `UPDATE staff SET ${fields.join(', ')} WHERE id = $${idx} RETURNING *`,
+      params
     );
 
     if (result.rows.length === 0) {

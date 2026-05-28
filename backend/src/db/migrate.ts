@@ -41,14 +41,25 @@ const createTables = async () => {
       address TEXT,
       date_of_birth DATE NOT NULL,
       date_of_joining DATE NOT NULL,
+      age INTEGER NOT NULL DEFAULT 0,
+      is_minor BOOLEAN DEFAULT false,
       gender VARCHAR(10) CHECK (gender IN ('male', 'female', 'other')) NOT NULL,
       designation_id INTEGER REFERENCES designations(id) ON DELETE SET NULL,
       department_id INTEGER REFERENCES departments(id) ON DELETE SET NULL,
       profile_image TEXT,
       is_active BOOLEAN DEFAULT true,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      CONSTRAINT chk_min_age CHECK (EXTRACT(YEAR FROM age(date_of_joining, date_of_birth)) >= 18)
     );
+  `);
+
+  await query(`
+    ALTER TABLE staff ADD COLUMN IF NOT EXISTS age INTEGER NOT NULL DEFAULT 0;
+  `);
+
+  await query(`
+    ALTER TABLE staff ADD COLUMN IF NOT EXISTS is_minor BOOLEAN DEFAULT false;
   `);
 
   await query(`
