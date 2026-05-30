@@ -1,5 +1,8 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-do-not-use-in-production';
 
@@ -38,6 +41,8 @@ export const authenticate = (req: AuthRequest, res: Response, next: NextFunction
     };
     next();
   } catch (err) {
+    const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+    console.error('JWT verification failed:', errorMessage, 'token prefix:', token.substring(0, 20) + '...');
     return res.status(401).json({ error: 'Invalid or expired token' });
   }
 };
