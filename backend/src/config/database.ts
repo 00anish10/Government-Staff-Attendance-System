@@ -1,7 +1,12 @@
 import { Pool, PoolConfig } from 'pg';
 import dotenv from 'dotenv';
 
-dotenv.config();
+const dotenvResult = dotenv.config();
+if (dotenvResult.error) {
+  console.error('[database.ts] dotenv.config() failed:', dotenvResult.error.message);
+} else {
+  console.log('[database.ts] dotenv.config() succeeded, JWT_SECRET:', process.env.JWT_SECRET ? process.env.JWT_SECRET.substring(0, 15) + '...' : 'NOT SET');
+}
 
 const poolConfig: PoolConfig = {
   host: process.env.DB_HOST || 'localhost',

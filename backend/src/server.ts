@@ -42,6 +42,13 @@ app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', message: 'Sarkaari Hajiri Pranali API is running', timestamp: new Date().toISOString() });
 });
 
+app.get('/api/debug/echo-headers', (req, res) => {
+  res.json({
+    authorization: req.headers.authorization || '(none)',
+    allHeaders: req.headers,
+  });
+});
+
 app.use('/api/auth', authRoutes);
 app.use('/api/departments', authenticate, departmentRoutes);
 app.use('/api/designations', authenticate, designationRoutes);

@@ -42,6 +42,7 @@ async function request<T>(endpoint: string, options?: RequestInit): Promise<T> {
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
   }
+  console.log(`[api.ts] request ${options?.method || 'GET'} ${endpoint}`, token ? `token: ${token.substring(0, 20)}...` : 'no token');
 
   const res = await fetch(`${API_BASE}${endpoint}`, {
     headers,

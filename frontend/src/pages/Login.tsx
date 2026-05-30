@@ -20,7 +20,9 @@ export default function Login() {
     setError('');
     try {
       const res = await api.auth.login(username, password);
+      console.log('[Login] Response:', res);
       const { token, user } = res.data;
+      console.log('[Login] Token stored:', token ? token.substring(0, 30) + '...' : 'NULL');
       localStorage.setItem('token', token);
       storeUser(user);
       navigate('/', { replace: true });

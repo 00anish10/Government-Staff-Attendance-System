@@ -6,7 +6,13 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.getClient = exports.query = void 0;
 const pg_1 = require("pg");
 const dotenv_1 = __importDefault(require("dotenv"));
-dotenv_1.default.config();
+const dotenvResult = dotenv_1.default.config();
+if (dotenvResult.error) {
+    console.error('[database.ts] dotenv.config() failed:', dotenvResult.error.message);
+}
+else {
+    console.log('[database.ts] dotenv.config() succeeded, JWT_SECRET:', process.env.JWT_SECRET ? process.env.JWT_SECRET.substring(0, 15) + '...' : 'NOT SET');
+}
 const poolConfig = {
     host: process.env.DB_HOST || 'localhost',
     port: parseInt(process.env.DB_PORT || '5432'),

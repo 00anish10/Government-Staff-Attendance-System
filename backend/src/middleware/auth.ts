@@ -5,6 +5,9 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-do-not-use-in-production';
+console.log('[auth.ts] JWT_SECRET loaded:', JWT_SECRET.substring(0, 15) + '...');
+console.log('[auth.ts] process.env.JWT_SECRET:', process.env.JWT_SECRET ? process.env.JWT_SECRET.substring(0, 15) + '...' : 'NOT SET');
+console.log('[auth.ts] CWD:', process.cwd());
 
 export interface AuthPayload {
   id: number;
@@ -32,6 +35,7 @@ export const authenticate = (req: AuthRequest, res: Response, next: NextFunction
   const token = parts[1];
 
   try {
+    console.log('[auth.authenticate] Verifying with secret:', (JWT_SECRET || '').substring(0, 15) + '...');
     const decoded = jwt.verify(token, JWT_SECRET) as AuthPayload;
     req.user = {
       id: decoded.id,

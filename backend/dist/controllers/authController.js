@@ -8,6 +8,7 @@ const bcrypt_1 = __importDefault(require("bcrypt"));
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const database_1 = require("../config/database");
 const auth_1 = require("../middleware/auth");
+console.log('[authController] JWT_SECRET imported:', (auth_1.JWT_SECRET || '').substring(0, 15) + '...');
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '24h';
 const login = async (req, res, next) => {
     try {
@@ -33,7 +34,9 @@ const login = async (req, res, next) => {
             role: user.role,
             staff_id: user.staff_id,
         };
+        console.log('[authController] Signing token with secret:', (auth_1.JWT_SECRET || '').substring(0, 15) + '...');
         const token = jsonwebtoken_1.default.sign(payload, auth_1.JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
+        console.log('[authController] Token signed successfully, first 30 chars:', token.substring(0, 30) + '...');
         res.json({
             data: {
                 token,

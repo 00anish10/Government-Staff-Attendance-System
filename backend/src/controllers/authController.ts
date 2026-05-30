@@ -4,6 +4,8 @@ import jwt from 'jsonwebtoken';
 import { query } from '../config/database';
 import { JWT_SECRET } from '../middleware/auth';
 
+console.log('[authController] JWT_SECRET imported:', (JWT_SECRET || '').substring(0, 15) + '...');
+
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '24h';
 
 export const login = async (req: Request, res: Response, next: NextFunction) => {
@@ -40,7 +42,9 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
       staff_id: user.staff_id,
     };
 
+    console.log('[authController] Signing token with secret:', (JWT_SECRET || '').substring(0, 15) + '...');
     const token = jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN as any });
+    console.log('[authController] Token signed successfully, first 30 chars:', token.substring(0, 30) + '...');
 
     res.json({
       data: {

@@ -9,6 +9,9 @@ const dotenv_1 = __importDefault(require("dotenv"));
 dotenv_1.default.config();
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-do-not-use-in-production';
 exports.JWT_SECRET = JWT_SECRET;
+console.log('[auth.ts] JWT_SECRET loaded:', JWT_SECRET.substring(0, 15) + '...');
+console.log('[auth.ts] process.env.JWT_SECRET:', process.env.JWT_SECRET ? process.env.JWT_SECRET.substring(0, 15) + '...' : 'NOT SET');
+console.log('[auth.ts] CWD:', process.cwd());
 const authenticate = (req, res, next) => {
     const authHeader = req.headers.authorization;
     if (!authHeader) {
@@ -20,6 +23,7 @@ const authenticate = (req, res, next) => {
     }
     const token = parts[1];
     try {
+        console.log('[auth.authenticate] Verifying with secret:', (JWT_SECRET || '').substring(0, 15) + '...');
         const decoded = jsonwebtoken_1.default.verify(token, JWT_SECRET);
         req.user = {
             id: decoded.id,
